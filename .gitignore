@@ -1,0 +1,13 @@
+# 密钥，切勿提交
+.env
+.env.*
+!.env.example
+
+# 生成产物
+output/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
