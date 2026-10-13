@@ -21,14 +21,10 @@ from urllib.parse import urlparse
 import feedparser
 import requests
 
+from sources import resolve_sources
+
 DEFAULT_BASE_URL = "https://api.deepseek.com"
 DEFAULT_MODEL = "deepseek-chat"
-
-# 默认双来源（均为官方 RSS，已验证可访问）
-DEFAULT_FEEDS = [
-    ("BBC News", "https://feeds.bbci.co.uk/news/world/rss.xml"),
-    ("The Guardian", "https://www.theguardian.com/world/rss"),
-]
 
 USER_AGENT = "news-brief/1.0"
 
@@ -106,27 +102,6 @@ def load_config():
         "window_hours": int(os.environ.get("NEWS_WINDOW_HOURS", "24")),
         "max_articles": int(os.environ.get("MAX_ARTICLES", "5")),
     }
-
-
-def parse_feeds(cli_feeds):
-    """解析新闻源列表。默认 BBC + The Guardian，可用 RSS_FEEDS 或 --feeds 覆盖。
-
-    格式："名称=URL,名称2=URL2"（逗号分隔；名称可省略，省略时用 feed 自身标题）。
-    """
-    raw = cli_feeds or os.environ.get("RSS_FEEDS", "").strip()
-    if not raw:
-        return list(DEFAULT_FEEDS)
-    feeds = []
-    for part in raw.split(","):
-        part = part.strip()
-        if not part:
-            continue
-        if "=" in part:
-            name, url = part.split("=", 1)
-            feeds.append((name.strip(), url.strip()))
-        else:
-            feeds.append(("", part))
-    return feeds
 
 
 def clean_html(text):
@@ -303,7 +278,7 @@ def main(argv=None):
 
     load_dotenv()
     cfg = load_config()
-    feeds = parse_feeds(args.feeds)
+    sources = resolve_sources(args.feeds)
 
     if not args.dry_run and not cfg["api_key"]:
         sys.stderr.write(
@@ -319,7 +294,8 @@ def main(argv=None):
     source_results = []
     all_selected = []
 
-    for name, url in feeds:
+    for s in sources:
+        name, url = s["name"], s["url"]
         try:
             feed_title, entries = fetch_feed(url)
         except RuntimeError as exc:

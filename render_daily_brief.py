@@ -189,20 +189,25 @@ def render(data):
     else:
         cards = '<p class="empty">没有入选事件。</p>'
 
-    src_failures = [s for s in data.get("sources", []) if s.get("status") == "error"]
-    fail_html = ""
-    if src_failures:
-        items = "".join(
-            f'<li class="src-fail">{esc(s.get("name", s.get("url", "?")))}：{esc(s.get("error", ""))}</li>'
-            for s in src_failures
-        )
-        fail_html = f"<li>来源获取失败：<ul>{items}</ul></li>"
+    src_items = []
+    for s in data.get("sources", []):
+        nm = esc(s.get("name") or s.get("url") or "?")
+        if s.get("status") == "error":
+            src_items.append(f'<li class="src-fail">{nm}：获取失败（{esc(s.get("error", ""))}）</li>')
+        else:
+            tr = "，已截断" if s.get("truncated") else ""
+            nt = f"，无发布时间剔除 {s.get('no_time', 0)}" if s.get("no_time") else ""
+            src_items.append(
+                f"<li>{nm}：抓取 {s.get('fetched', 0)} · 窗口内 {s.get('in_window', 0)} · "
+                f"入选 {s.get('selected', 0)}{tr}{nt}</li>"
+            )
+    src_html = f"<ul>{''.join(src_items)}</ul>" if src_items else ""
 
     stats = (
         '<div class="stats">'
         f'<div>候选事件 {sel.get("candidate_count", 0)} 个 · 入选 {sel.get("selected_count", 0)} 个'
         f' · 采集窗口 {win_start} ～ {win_end}（北京时间）</div>'
-        f"{fail_html}</div>"
+        f"{src_html}</div>"
     )
 
     scope = f'<div class="notice">{esc(data.get("scope_note", ""))}</div>'

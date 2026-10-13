@@ -31,15 +31,14 @@ from main import (
     BEIJING,
     beijing_now,
     load_dotenv,
-    parse_feeds,
     reset_usage,
     usage_summary,
 )
+from sources import resolve_sources
 from group_events import (
-    build_events,
-    call_grouping,
     fallback_events,
     fetch_candidates,
+    group_candidates,
     load_config,
 )
 from daily_brief import build_daily_brief
@@ -142,7 +141,7 @@ def main(argv=None):
     load_dotenv()
     reset_usage()
     cfg = load_config()  # 来自 group_events：api_key/base_url/model/window_hours/max_candidates
-    feeds = parse_feeds(args.feeds)
+    sources = resolve_sources(args.feeds)
 
     t0 = time.time()
     beijing_ts = beijing_now().strftime("%Y-%m-%d_%H%M")
@@ -167,7 +166,7 @@ def main(argv=None):
                       "detail": f"offline 使用既有数据（历史数据）: {events_path}"})
     else:
         candidates, source_results = fetch_candidates(
-            feeds, window_start, window_end, cfg["max_candidates"]
+            sources, window_start, window_end, cfg["max_candidates"]
         )
         if not candidates:
             print("ERROR: 未获取到任何候选文章（来源可能全部失败，或窗口内无新闻）。")
@@ -189,8 +188,7 @@ def main(argv=None):
             events, status, message = None, None, None
             for attempt in (1, 2):
                 try:
-                    groups_raw = call_grouping(cfg, candidates)
-                    events, status, message = build_events(candidates, groups_raw)
+                    events, status, message = group_candidates(cfg, candidates)
                 except Exception as exc:  # noqa: BLE001
                     sys.stderr.write(f"WARNING: 归组调用失败（第 {attempt} 次）: {exc}\n")
                     events, status, message = fallback_events(candidates), "fallback", (
@@ -281,6 +279,14 @@ def main(argv=None):
     src_ok = sum(1 for s in events_data.get("sources", []) if s["status"] == "ok")
     src_err = sum(1 for s in events_data.get("sources", []) if s["status"] == "error")
     print(f"来源: {src_ok} 成功 / {src_err} 失败")
+    for s in events_data.get("sources", []):
+        if s.get("status") == "ok":
+            tr = "，已截断" if s.get("truncated") else ""
+            nt = f"，无发布时间剔除 {s.get('no_time', 0)}" if s.get("no_time") else ""
+            print(f"  [{s.get('name', s.get('url'))}] 抓取 {s.get('fetched', 0)} · "
+                  f"窗口内 {s.get('in_window', 0)} · 入选 {s.get('selected', 0)}{tr}{nt}")
+        else:
+            print(f"  [{s.get('name') or s.get('url')}] 失败: {s.get('error')}")
     g = events_data.get("grouping", {})
     if g.get("status") == "fallback":
         print(f"归组: 失败（{g.get('message')}）—— 已退回逐条展示，本次无多来源事件。")

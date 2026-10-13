@@ -21,7 +21,8 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from main import load_dotenv, parse_feeds, fetch_feed, dedupe_by_url, extract_json, record_usage
+from main import load_dotenv, fetch_feed, dedupe_by_url, extract_json, record_usage
+from sources import resolve_sources
 
 DEFAULT_MAX_CANDIDATES = 30
 DEFAULT_BASE_URL = "https://api.deepseek.com"
@@ -40,6 +41,8 @@ GROUPING_SYSTEM = (
     "- 无法确定是否同一事件的，不要强行配对，保持独立。\n"
     "- 一篇“综述/盘点”类文章若同时涉及多个话题，只归入其最核心的一个事件，\n"
     "  不要同时出现在多个组。\n"
+    "- 多家转载同一通讯社稿件：仅当输入明确给出转载/来源归属（如都写“据某通讯社报道”）\n"
+    "  时才可据此归为同一事件，且这不代表独立证实；不要自行猜测哪些稿件来自同一通讯社。\n"
     "- 只依据输入判断，不得补充输入之外的事实或背景，不得生成“立场”“真伪”等判断。\n\n"
     "输出要求：\n"
     "- 只输出一个 JSON 对象，格式：\n"
@@ -67,11 +70,20 @@ def make_article_id(url):
     return hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
 
 
-def fetch_candidates(feeds, window_start, window_end, max_candidates):
-    """抓取每家最多 max_candidates 条 24h 内候选。返回 (candidates, source_results)。"""
+def fetch_candidates(sources, window_start, window_end, default_max=None):
+    """抓取每家候选（每家最多其 max_candidates 条，默认 30）。返回 (candidates, source_results)。
+
+    每家来源记录：抓取数、窗口内数、入选数、截断标志、无发布时间条目数、采集时间。
+    缺少可靠发布时间的条目不进入 24h 窗口（不冒充当天新闻）。
+    """
+    if default_max is None:
+        default_max = int(os.environ.get("MAX_CANDIDATES", str(DEFAULT_MAX_CANDIDATES)))
     candidates = []
     source_results = []
-    for name, url in feeds:
+    for s in sources:
+        name, url = s["name"], s["url"]
+        cap = int(s.get("max_candidates") or default_max)
+        fetched_at = datetime.now(timezone.utc).isoformat()
         try:
             feed_title, entries = fetch_feed(url)
         except RuntimeError as exc:
@@ -85,18 +97,24 @@ def fetch_candidates(feeds, window_start, window_end, max_candidates):
                     "in_window": 0,
                     "selected": 0,
                     "error": str(exc),
+                    "truncated": False,
+                    "no_time": 0,
+                    "fetched_at": fetched_at,
                 }
             )
             continue
 
         source_name = name or feed_title
+        with_time = [e for e in entries if e["published_at"]]
+        no_time = len(entries) - len(with_time)
         in_window = [
-            e
-            for e in entries
-            if e["published_at"] and window_start <= e["published_at"] <= window_end
+            e for e in with_time
+            if window_start <= e["published_at"] <= window_end
         ]
         in_window.sort(key=lambda e: e["published_at"], reverse=True)
-        selected = dedupe_by_url(in_window)[:max_candidates]
+        selected = dedupe_by_url(in_window)
+        truncated = len(selected) > cap
+        selected = selected[:cap]
 
         source_results.append(
             {
@@ -107,6 +125,9 @@ def fetch_candidates(feeds, window_start, window_end, max_candidates):
                 "in_window": len(in_window),
                 "selected": len(selected),
                 "error": None,
+                "truncated": truncated,
+                "no_time": no_time,
+                "fetched_at": fetched_at,
             }
         )
 
@@ -119,6 +140,7 @@ def fetch_candidates(feeds, window_start, window_end, max_candidates):
                     "url": e["url"],
                     "published_at": e["published_at"].isoformat(),
                     "rss_description": e["description"],
+                    "fetched_at": fetched_at,
                 }
             )
     return candidates, source_results
@@ -269,8 +291,129 @@ def build_events(candidates, groups_raw):
     return events, "ok", message
 
 
+GROUPING_INPUT_TOKEN_BUDGET = 20000  # 单次归组输入估算 token 上限，超过则分批
+GROUPING_BATCH_SIZE = 35             # 分批时每批候选数
+
+
+def estimate_tokens(text):
+    """粗略估算 token 数：按每 3 个字符约 1 token（偏保守）。"""
+    return max(1, len(text or "") // 3)
+
+
+MERGE_SYSTEM = (
+    "你是一名新闻事件归组的合并助手。你收到的是此前分批评定出的候选（每个候选有唯一 id、"
+    "标题与摘要）。任务：把报道「同一具体事件」的候选合并到同一组，输出合并后的组。\n"
+    "判定标准：同一起具体发生的事（同一时间、地点、主体、动作）才算同一事件；仅同国家/"
+    "人物/机构/话题不算。无法确定是否同一事件的不要合并，保持独立（程序会补为单独组）。\n"
+    "输出：只输出一个 JSON 对象，格式：\n"
+    '{"groups": [{"article_ids": ["<id>", ...], "title_zh": "...", "reason": "..."}]}\n'
+    "- article_ids 只能使用输入给出的 id；每篇文章最多出现在一个组。\n"
+    "- 只输出 JSON，不要输出任何其它文字。"
+)
+
+
+def call_merge_groups(cfg, items):
+    """对分批归组后的候选做跨批合并。items: [(synthetic_id, title, desc), ...]。返回模型 JSON。"""
+    url = f"{cfg['base_url']}/chat/completions"
+    headers = {"Authorization": f"Bearer {cfg['api_key']}", "Content-Type": "application/json"}
+    blocks = []
+    for sid, title, desc in items:
+        blocks.append(f"[{sid}] {title}\n{desc}")
+    user = (
+        f"待合并的候选（共 {len(items)} 个，id | 标题 | 摘要）：\n\n"
+        + "\n\n".join(blocks)
+        + "\n\n请把报道同一具体事件的候选合并成组，只输出 JSON。"
+    )
+    payload = {
+        "model": cfg["model"],
+        "messages": [
+            {"role": "system", "content": MERGE_SYSTEM},
+            {"role": "user", "content": user},
+        ],
+        "temperature": 0.1,
+        "stream": False,
+        "response_format": {"type": "json_object"},
+    }
+    try:
+        resp = requests.post(url, headers=headers, json=payload, timeout=180)
+    except requests.RequestException as exc:
+        raise RuntimeError(f"调用 DeepSeek API 网络失败: {exc}") from exc
+    if resp.status_code != 200:
+        raise RuntimeError(f"DeepSeek API 返回 HTTP {resp.status_code}: {resp.text[:300]}")
+    data = resp.json()
+    record_usage(data.get("usage"))
+    return extract_json(data["choices"][0]["message"]["content"])
+
+
+def _chunk_group(cfg, chunk):
+    """对一批候选做归组。返回 [(article_ids, title_zh, reason), ...]；未分组文章各自成组。"""
+    raw = call_grouping(cfg, chunk)
+    groups = []
+    remaining = set(c["article_id"] for c in chunk)
+    if isinstance(raw, dict) and isinstance(raw.get("groups"), list):
+        for g in raw["groups"]:
+            ids = [i for i in (g.get("article_ids") or []) if isinstance(i, str) and i in remaining]
+            ids = list(dict.fromkeys(ids))
+            if not ids:
+                continue
+            groups.append((ids, str(g.get("title_zh") or "").strip(), str(g.get("reason") or "").strip()))
+            for i in ids:
+                remaining.discard(i)
+    for aid in remaining:
+        groups.append(([aid], "", ""))
+    return groups
+
+
+def group_candidates(cfg, candidates):
+    """归组入口：输入不大时单次调用；过大时自动分批，再做跨批同事件合并。
+
+    返回 (events, status, message)，与 build_events 一致。不会静默截断：分批时全部
+    候选都会送入模型，未分组文章也进入合并步骤。
+    """
+    if not candidates:
+        return [], "ok", "没有候选文章。"
+    if estimate_tokens(build_grouping_prompt(candidates)) <= GROUPING_INPUT_TOKEN_BUDGET:
+        groups_raw = call_grouping(cfg, candidates)
+        return build_events(candidates, groups_raw)
+
+    aid_to_article = {c["article_id"]: c for c in candidates}
+    super_items = []
+    sid_to_aids = {}
+    sid = 0
+    for i in range(0, len(candidates), GROUPING_BATCH_SIZE):
+        chunk = candidates[i:i + GROUPING_BATCH_SIZE]
+        for ids, title_zh, _reason in _chunk_group(cfg, chunk):
+            sid += 1
+            key = f"m{sid}"
+            first = aid_to_article[ids[0]]
+            title = title_zh or first["title"]
+            desc = first.get("rss_description") or "（无摘要）"
+            if len(ids) > 1:
+                extra = "；".join(aid_to_article[a]["title"] for a in ids[1:4])
+                desc = desc + (f"（同组另有：{extra}）" if extra else "")
+            super_items.append((key, title, desc))
+            sid_to_aids[key] = ids
+
+    merged_raw = call_merge_groups(cfg, super_items)
+    groups = []
+    if isinstance(merged_raw, dict) and isinstance(merged_raw.get("groups"), list):
+        for g in merged_raw["groups"]:
+            real_ids = []
+            for k in (g.get("article_ids") or []):
+                if k in sid_to_aids:
+                    real_ids.extend(sid_to_aids[k])
+            real_ids = list(dict.fromkeys(real_ids))
+            if real_ids:
+                groups.append({
+                    "article_ids": real_ids,
+                    "title_zh": str(g.get("title_zh") or "").strip(),
+                    "grouping_reason": str(g.get("reason") or "").strip(),
+                })
+    return build_events(candidates, {"groups": groups})
+
+
 def main(argv=None):
-    parser = argparse.ArgumentParser(description="同一事件归组（BBC + The Guardian）")
+    parser = argparse.ArgumentParser(description="同一事件归组（多来源）")
     parser.add_argument("--dry-run", action="store_true", help="只抓取候选，不调用 DeepSeek")
     parser.add_argument("--feeds", help='覆盖新闻源，格式 "名称=URL,名称2=URL2"')
     parser.add_argument("--output", default="output/events.json", help="输出文件路径")
@@ -278,7 +421,7 @@ def main(argv=None):
 
     load_dotenv()
     cfg = load_config()
-    feeds = parse_feeds(args.feeds)
+    sources = resolve_sources(args.feeds)
 
     if not args.dry_run and not cfg["api_key"]:
         sys.stderr.write(
@@ -292,7 +435,7 @@ def main(argv=None):
     window_end = now
 
     candidates, source_results = fetch_candidates(
-        feeds, window_start, window_end, cfg["max_candidates"]
+        sources, window_start, window_end, cfg["max_candidates"]
     )
 
     if args.dry_run:
@@ -301,8 +444,7 @@ def main(argv=None):
         events, status, message = [], "ok", "没有候选文章。"
     else:
         try:
-            groups_raw = call_grouping(cfg, candidates)
-            events, status, message = build_events(candidates, groups_raw)
+            events, status, message = group_candidates(cfg, candidates)
         except Exception as exc:  # noqa: BLE001 归组失败退回逐条展示
             sys.stderr.write(f"WARNING: 归组失败: {exc}\n")
             events, status, message = fallback_events(candidates), "fallback", f"归组调用失败：{exc}；已退回逐条展示。"
