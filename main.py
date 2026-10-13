@@ -35,6 +35,38 @@ USER_AGENT = "news-brief/1.0"
 TAG_RE = re.compile(r"<[^>]+>")
 WS_RE = re.compile(r"\s+")
 
+BEIJING = timezone(timedelta(hours=8))
+
+
+def beijing_now():
+    """当前北京时间（aware datetime）。"""
+    return datetime.now(BEIJING)
+
+
+# DeepSeek API 用量统计（跨步骤累计，run_daily 结束时汇总）。
+_API_USAGE = {"calls": 0, "prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+
+
+def record_usage(usage):
+    """累计一次 API 调用的 token 用量。usage 为响应中的 usage 字段（可能缺失）。"""
+    if not isinstance(usage, dict):
+        return
+    _API_USAGE["calls"] += 1
+    for k in ("prompt_tokens", "completion_tokens", "total_tokens"):
+        v = usage.get(k)
+        if isinstance(v, (int, float)):
+            _API_USAGE[k] += int(v)
+
+
+def usage_summary():
+    """返回累计 API 用量（副本）。"""
+    return dict(_API_USAGE)
+
+
+def reset_usage():
+    for k in _API_USAGE:
+        _API_USAGE[k] = 0
+
 
 def _fix_stdio_encoding():
     """让 stdout/stderr 输出 UTF-8，避免 Windows 控制台中文乱码。"""

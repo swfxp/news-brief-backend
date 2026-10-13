@@ -99,6 +99,58 @@ h1 { font-size: 1.55rem; line-height: 1.3; margin: 0 0 6px; }
 .cell-desc { font-size: .85rem; color: #555; margin: 0; white-space: pre-wrap; word-break: break-word; }
 .empty { color: var(--muted); text-align: center; padding: 40px 0; }
 footer { color: var(--muted); font-size: .8rem; margin-top: 8px; text-align: center; }
+.brief-card {
+  background: #fbfbfa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.brief-part { margin-bottom: 14px; }
+.brief-part:last-child { margin-bottom: 0; }
+.brief-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .04em;
+  margin: 0 0 6px;
+}
+.brief-note { font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.brief-item {
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.brief-item:last-child { margin-bottom: 0; }
+.brief-en { margin: 0 0 2px; font-size: .92rem; }
+.brief-zh { margin: 0 0 4px; font-size: .92rem; color: #444; }
+.brief-source { margin-bottom: 8px; }
+.brief-source:last-child { margin-bottom: 0; }
+.brief-source-name { margin: 0 0 4px; font-size: .82rem; font-weight: 600; color: var(--muted); }
+.brief-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.id-tag {
+  font-size: .72rem;
+  color: var(--accent);
+  background: #eef3f8;
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.id-tag:hover { text-decoration: underline; }
+.brief-empty { color: var(--muted); font-size: .85rem; margin: 0; }
+.notice.brief-failed { margin: 12px 0; }
+details.original {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+details.original summary {
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
 @media (max-width: 480px) {
   h1 { font-size: 1.35rem; }
   .event-title { font-size: 1.05rem; }
@@ -158,7 +210,97 @@ def render_article_cell(a):
     </div>'''
 
 
-def render_event(ev, articles_by_id):
+def render_id_tag(aid, articles_by_id):
+    """把一个 article_id 渲染成可跳转到来源的小标签。"""
+    a = articles_by_id.get(aid)
+    if not a:
+        return ""
+    url = safe_url(a.get("url"))
+    label = esc(a.get("source") or aid)
+    if url:
+        return (
+            f'<a class="id-tag" href="{esc(url)}" target="_blank" rel="noopener noreferrer" '
+            f'title="{esc(aid)}">{label} ↗</a>'
+        )
+    return f'<span class="id-tag" title="{esc(aid)}">{label}</span>'
+
+
+def _brief_item_html(item, articles_by_id):
+    ids = item.get("article_ids") or [item.get("article_id")]
+    tags = "".join(render_id_tag(i, articles_by_id) for i in ids if i)
+    return (
+        '<div class="brief-item">'
+        f'<p class="brief-en">{esc(item.get("en", ""))}</p>'
+        f'<p class="brief-zh">{esc(item.get("zh", ""))}</p>'
+        f'<div class="brief-tags">{tags}</div>'
+        "</div>"
+    )
+
+
+def render_brief_card(ev, brief, articles_by_id):
+    b = brief["brief"]
+    parts = []
+
+    ov = b.get("overview") or {}
+    parts.append(
+        '<section class="brief-part">'
+        '<h4 class="brief-label">事件概述</h4>'
+        f'<p class="brief-en">{esc(ov.get("en", ""))}</p>'
+        f'<p class="brief-zh">{esc(ov.get("zh", ""))}</p>'
+        "</section>"
+    )
+
+    common = b.get("common") or []
+    if common:
+        common_html = "".join(_brief_item_html(i, articles_by_id) for i in common)
+    else:
+        common_html = '<p class="brief-empty">（两份输入未发现可明确共同支持的信息）</p>'
+    parts.append(
+        '<section class="brief-part">'
+        '<h4 class="brief-label">共同报道 <span class="brief-note">（非独立核实）</span></h4>'
+        f"{common_html}</section>"
+    )
+
+    per_source = b.get("per_source") or []
+    ps_html = ""
+    for src in per_source:
+        items_html = "".join(_brief_item_html(i, articles_by_id) for i in src.get("items", []))
+        ps_html += (
+            '<div class="brief-source">'
+            f'<h5 class="brief-source-name">{esc(src.get("source", ""))}</h5>'
+            f"{items_html}</div>"
+        )
+    if not per_source:
+        ps_html = '<p class="brief-empty">（无单一来源的额外补充）</p>'
+    parts.append(
+        '<section class="brief-part">'
+        '<h4 class="brief-label">各家补充</h4>'
+        f"{ps_html}</section>"
+    )
+
+    lims = b.get("limitations") or []
+    if lims:
+        lim_html = "".join(_brief_item_html(i, articles_by_id) for i in lims)
+    else:
+        lim_html = '<p class="brief-empty">（未发现明显局限）</p>'
+    parts.append(
+        '<section class="brief-part">'
+        '<h4 class="brief-label">材料局限</h4>'
+        f"{lim_html}</section>"
+    )
+
+    return f'<div class="brief-card">{"".join(parts)}</div>'
+
+
+def render_brief_failed(ev, brief):
+    err = (brief.get("brief") or {}).get("error") or "未知错误"
+    return (
+        '<div class="notice brief-failed">'
+        f'⚠ 事件卡生成失败（{esc(err)}），以下仅展示原始材料。</div>'
+    )
+
+
+def render_event(ev, articles_by_id, brief=None):
     articles = [articles_by_id[a] for a in ev["article_ids"] if a in articles_by_id]
     if not articles:
         return ""
@@ -169,6 +311,25 @@ def render_event(ev, articles_by_id):
     reason = ev.get("grouping_reason") or ""
     reason_html = f'<p class="group-reason">归组理由：{esc(reason)}</p>' if reason else ""
     cells = "\n".join(render_article_cell(a) for a in articles)
+
+    if brief:
+        status = (brief.get("brief") or {}).get("status")
+        if status == "ok":
+            brief_html = render_brief_card(ev, brief, articles_by_id)
+            original = (
+                f'<details class="original"><summary>原始材料（{len(articles)} 篇）</summary>'
+                f'<div class="articles-grid">{cells}</div></details>'
+            )
+        else:
+            brief_html = render_brief_failed(ev, brief)
+            original = (
+                f'<details class="original" open><summary>原始材料（{len(articles)} 篇）</summary>'
+                f'<div class="articles-grid">{cells}</div></details>'
+            )
+    else:
+        brief_html = ""
+        original = f'<div class="articles-grid">{cells}</div>'
+
     return f'''
 <article class="{cls}">
   <div class="event-head">
@@ -176,8 +337,8 @@ def render_event(ev, articles_by_id):
     <span class="{badge_cls}">{esc(badge)}</span>
   </div>
   {reason_html}
-  <div class="articles-grid">{cells}
-  </div>
+  {brief_html}
+  {original}
 </article>'''
 
 
@@ -190,17 +351,26 @@ def sort_events(events, articles_by_id):
     return sorted(events, key=lambda e: 0 if e.get("source_count", 0) >= 2 else 1)
 
 
-def render(data):
+def render(data, briefs=None):
     articles_by_id = {a["article_id"]: a for a in data.get("articles", [])}
     events = data.get("events", [])
     grouping = data.get("grouping", {})
     gen_time = to_beijing(data.get("generated_at", "")) or ""
 
+    brief_by_event = {}
+    if briefs:
+        brief_by_event = {b.get("event_id"): b for b in briefs.get("events", [])}
+
     events = sort_events(events, articles_by_id)
     two_source = sum(1 for e in events if e.get("source_count", 0) >= 2)
+    brief_ok = sum(
+        1 for b in brief_by_event.values() if (b.get("brief") or {}).get("status") == "ok"
+    )
 
     if events:
-        cards = "\n".join(render_event(e, articles_by_id) for e in events)
+        cards = "\n".join(
+            render_event(e, articles_by_id, brief_by_event.get(e["event_id"])) for e in events
+        )
     else:
         cards = '<p class="empty">暂无候选新闻。</p>'
 
@@ -211,6 +381,13 @@ def render(data):
         notice = '<div class="notice">自动归组，尚未独立核实。</div>'
 
     order_note = f'<p class="order-note">含两个来源的事件优先展示（便于核对，非重要性排名）。多来源事件 {two_source} 个。</p>'
+
+    brief_note = ""
+    if briefs:
+        brief_note = (
+            '<p class="order-note">事件卡仅依据标题与 RSS 摘要；“共同报道”指两家来源都写了，'
+            f'不等于独立核实；“未提及”不等于否认。已生成事件卡 {brief_ok} 个。</p>'
+        )
 
     return f'''<!DOCTYPE html>
 <html lang="zh-CN">
@@ -227,6 +404,7 @@ def render(data):
       <p class="subtitle">生成于 {gen_time}（北京时间） · 候选 {len(data.get("articles", []))} 篇 · 事件 {len(events)} 个</p>
       {notice}
       {order_note}
+      {brief_note}
     </header>
     {cards}
     <footer>本页由本地脚本生成，不调用 AI，不联网。归组仅依据标题与 RSS 摘要，未读取全文。</footer>
@@ -234,6 +412,15 @@ def render(data):
 </body>
 </html>
 '''
+
+
+def load_briefs(input_path):
+    """读取与 events.json 同目录的 event_briefs.json；不存在则返回 None。"""
+    p = os.path.join(os.path.dirname(input_path), "event_briefs.json")
+    if not os.path.exists(p):
+        return None
+    with open(p, "r", encoding="utf-8") as f:
+        return json.load(f)
 
 
 def main(argv=None):
@@ -248,7 +435,8 @@ def main(argv=None):
     with open(input_path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
-    page = render(data)
+    briefs = load_briefs(input_path)
+    page = render(data, briefs)
 
     out_dir = os.path.dirname(output_path)
     if out_dir:

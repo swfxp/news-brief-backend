@@ -21,7 +21,7 @@ from datetime import datetime, timedelta, timezone
 
 import requests
 
-from main import load_dotenv, parse_feeds, fetch_feed, dedupe_by_url, extract_json
+from main import load_dotenv, parse_feeds, fetch_feed, dedupe_by_url, extract_json, record_usage
 
 DEFAULT_MAX_CANDIDATES = 30
 DEFAULT_BASE_URL = "https://api.deepseek.com"
@@ -38,6 +38,8 @@ GROUPING_SYSTEM = (
     "- 仅仅涉及同一个国家、人物、机构或话题，不代表同一事件；日期不同、地点不同、主体不同的"
     "报道不要归为一组。\n"
     "- 无法确定是否同一事件的，不要强行配对，保持独立。\n"
+    "- 一篇“综述/盘点”类文章若同时涉及多个话题，只归入其最核心的一个事件，\n"
+    "  不要同时出现在多个组。\n"
     "- 只依据输入判断，不得补充输入之外的事实或背景，不得生成“立场”“真伪”等判断。\n\n"
     "输出要求：\n"
     "- 只输出一个 JSON 对象，格式：\n"
@@ -162,6 +164,7 @@ def call_grouping(cfg, candidates):
         raise RuntimeError(f"DeepSeek API 返回 HTTP {resp.status_code}: {resp.text[:300]}")
 
     data = resp.json()
+    record_usage(data.get("usage"))
     content = data["choices"][0]["message"]["content"]
     return extract_json(content)
 
@@ -203,8 +206,9 @@ def fallback_events(candidates):
 def build_events(candidates, groups_raw):
     """校验模型输出并构建事件。返回 (events, status, message)。
 
-    规则：返回的 id 必须存在；同一文章不能进入多个组；未分组文章补为单独组；
-    任何校验失败即明确报告并退回逐条展示（全部各自成组）。
+    规则：返回的 id 必须存在；同一文章不得进入多个组——若模型把某篇文章放进多个组
+    （多见于“综述/盘点”类文章），保留其首次出现、从后续组剔除，并在消息中明确报告，
+    不因此整体退回。结构错误、未知 id 等真错误才退回逐条展示（全部各自成组）。
     """
     candidate_ids = {c["article_id"] for c in candidates}
     articles_by_id = {c["article_id"]: c for c in candidates}
@@ -212,8 +216,7 @@ def build_events(candidates, groups_raw):
     if not isinstance(groups_raw, dict) or not isinstance(groups_raw.get("groups"), list):
         return fallback_events(candidates), "fallback", "模型输出无效（不是预期的 JSON 结构），已退回逐条展示。"
 
-    groups = []
-    seen = {}
+    parsed = []
     for g in groups_raw["groups"]:
         raw_ids = g.get("article_ids")
         if not isinstance(raw_ids, list) or not all(isinstance(i, str) for i in raw_ids):
@@ -224,27 +227,45 @@ def build_events(candidates, groups_raw):
         for aid in uniq:
             if aid not in candidate_ids:
                 return fallback_events(candidates), "fallback", f"模型输出无效（未知文章 id: {aid}），已退回逐条展示。"
-            seen[aid] = seen.get(aid, 0) + 1
-        groups.append(
-            {
-                "article_ids": uniq,
-                "title_zh": str(g.get("title_zh") or "").strip(),
-                "grouping_reason": str(g.get("reason") or "").strip(),
-            }
+        parsed.append(
+            (
+                uniq,
+                str(g.get("title_zh") or "").strip(),
+                str(g.get("reason") or "").strip(),
+            )
         )
 
-    for aid, cnt in seen.items():
-        if cnt > 1:
-            return fallback_events(candidates), "fallback", f"模型输出无效（文章 {aid} 出现在多个组），已退回逐条展示。"
+    # 去重：每篇文章只保留在第一个出现的组；重复出现从后续组剔除（不整体退回）。
+    groups = []
+    assigned = set()
+    duplicate_ids = []
+    for uniq, title_zh, reason in parsed:
+        keep = []
+        for aid in uniq:
+            if aid in assigned:
+                duplicate_ids.append(aid)
+            else:
+                assigned.add(aid)
+                keep.append(aid)
+        if keep:
+            groups.append(
+                {"article_ids": keep, "title_zh": title_zh, "grouping_reason": reason}
+            )
 
-    grouped_ids = set(seen.keys())
+    grouped_ids = set(assigned)
     events = list(groups)
     for aid in candidate_ids:
         if aid not in grouped_ids:
             events.append({"article_ids": [aid], "title_zh": "", "grouping_reason": ""})
 
     events = finalize_events(events, articles_by_id)
-    message = f"归组完成：{len(groups)} 个多篇组，其余 {len(candidate_ids) - len(grouped_ids)} 篇单独成组。"
+    multi = sum(1 for g in groups if len(g["article_ids"]) >= 2)
+    message = f"归组完成：{multi} 个多篇组，其余 {len(events) - multi} 篇单独成组。"
+    if duplicate_ids:
+        dup = "、".join(dict.fromkeys(duplicate_ids))
+        message += (
+            f"（{len(duplicate_ids)} 篇被模型重复归入多组，已保留首次出现并从后续组剔除：{dup}。）"
+        )
     return events, "ok", message
 
 
