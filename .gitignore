@@ -11,3 +11,9 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# 日志与工具缓存
+*.log
+.pytest_cache/
+.mypy_cache/
+.DS_Store

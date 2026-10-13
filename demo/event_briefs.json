@@ -1,0 +1,71 @@
+{
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "source_events_file": "demo/events.json",
+  "dual_source_only": true,
+  "prompt_version": "demo",
+  "events": [
+    {
+      "event_id": "e1",
+      "title_zh": "亚特兰蒂斯港储油罐爆炸致 6 人受伤",
+      "article_ids": [
+        "demo000000001",
+        "demo000000002"
+      ],
+      "source_count": 2,
+      "material_hash": "demo-e1",
+      "brief": {
+        "status": "ok",
+        "title": {
+          "en": "Atlantis port fuel depot blast injures six",
+          "zh": "亚特兰蒂斯港储油罐爆炸致 6 人受伤"
+        },
+        "overview": {
+          "en": "Six people were injured in an explosion at a fuel depot near Atlantis port, officials said.",
+          "zh": "据官员称，亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。"
+        },
+        "common": [
+          {
+            "en": "Six people were injured in an explosion at a fuel/storage depot near Atlantis port.",
+            "zh": "亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。",
+            "article_ids": [
+              "demo000000001",
+              "demo000000002"
+            ]
+          }
+        ],
+        "per_source": [
+          {
+            "source": "示例媒体 A",
+            "items": [
+              {
+                "en": "The cause is under investigation, officials said.",
+                "zh": "官员称事故原因正在调查中。",
+                "article_id": "demo000000001"
+              }
+            ]
+          },
+          {
+            "source": "示例媒体 B",
+            "items": [
+              {
+                "en": "No deaths were reported, emergency services said.",
+                "zh": "应急部门称无死亡报告。",
+                "article_id": "demo000000002"
+              }
+            ]
+          }
+        ],
+        "limitations": [
+          {
+            "en": "This tool read only the titles and RSS summaries, not the full articles.",
+            "zh": "本工具仅读取标题与 RSS 摘要，未读取全文。",
+            "article_ids": [
+              "demo000000001",
+              "demo000000002"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,211 @@
+{
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "fetched_at": "2026-01-01T00:00:00+00:00",
+  "source_events_file": "demo/events.json",
+  "data_mode": "fresh",
+  "window_start": "2025-12-31T00:00:00+00:00",
+  "window_end": "2026-01-01T00:00:00+00:00",
+  "sources": [
+    {
+      "name": "示例媒体 A",
+      "url": "https://example.com/demo/feed-a",
+      "status": "ok",
+      "fetched": 3,
+      "in_window": 3,
+      "selected": 3,
+      "error": null
+    },
+    {
+      "name": "示例媒体 B",
+      "url": "https://example.com/demo/feed-b",
+      "status": "ok",
+      "fetched": 2,
+      "in_window": 2,
+      "selected": 2,
+      "error": null
+    }
+  ],
+  "prompt_version": "demo",
+  "scope_note": "当前来源范围内的选读，非全球热点排行榜",
+  "selection": {
+    "status": "ok",
+    "candidate_count": 3,
+    "selected_count": 3,
+    "selected_event_ids": [
+      "e1",
+      "e2",
+      "e3"
+    ],
+    "unselected_event_ids": [],
+    "message": "筛选完成：从 3 个事件中选出 3 件。"
+  },
+  "events": [
+    {
+      "event_id": "e1",
+      "title_en": "Atlantis port fuel depot blast injures six",
+      "title_zh": "亚特兰蒂斯港储油罐爆炸致 6 人受伤",
+      "article_ids": [
+        "demo000000001",
+        "demo000000002"
+      ],
+      "source_count": 2,
+      "reused": false,
+      "material_hash": "demo-e1",
+      "selection_reason": {
+        "en": "Two outlets both report the same port blast with six injured.",
+        "zh": "两家媒体都报道了同一起港区爆炸、6 人受伤。",
+        "article_ids": [
+          "demo000000001",
+          "demo000000002"
+        ]
+      },
+      "card": {
+        "status": "ok",
+        "title": {
+          "en": "Atlantis port fuel depot blast injures six",
+          "zh": "亚特兰蒂斯港储油罐爆炸致 6 人受伤"
+        },
+        "overview": {
+          "en": "Six people were injured in an explosion at a fuel depot near Atlantis port, officials said.",
+          "zh": "据官员称，亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。"
+        },
+        "common": [
+          {
+            "en": "Six people were injured in an explosion at a fuel/storage depot near Atlantis port.",
+            "zh": "亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。",
+            "article_ids": [
+              "demo000000001",
+              "demo000000002"
+            ]
+          }
+        ],
+        "per_source": [
+          {
+            "source": "示例媒体 A",
+            "items": [
+              {
+                "en": "The cause is under investigation, officials said.",
+                "zh": "官员称事故原因正在调查中。",
+                "article_id": "demo000000001"
+              }
+            ]
+          },
+          {
+            "source": "示例媒体 B",
+            "items": [
+              {
+                "en": "No deaths were reported, emergency services said.",
+                "zh": "应急部门称无死亡报告。",
+                "article_id": "demo000000002"
+              }
+            ]
+          }
+        ],
+        "limitations": [
+          {
+            "en": "This tool read only the titles and RSS summaries, not the full articles.",
+            "zh": "本工具仅读取标题与 RSS 摘要，未读取全文。",
+            "article_ids": [
+              "demo000000001",
+              "demo000000002"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "e2",
+      "title_en": "Atlantis parliament passes new data privacy law",
+      "title_zh": "亚特兰蒂斯议会通过新数据隐私法",
+      "article_ids": [
+        "demo000000003"
+      ],
+      "source_count": 1,
+      "reused": false,
+      "material_hash": "demo-e2",
+      "selection_reason": {
+        "en": "A concrete new development (a law passed), single source.",
+        "zh": "有具体新进展（通过一项新法），单一来源。",
+        "article_ids": [
+          "demo000000003"
+        ]
+      },
+      "card": {
+        "status": "ok",
+        "single_source": true,
+        "source": "示例媒体 A",
+        "title": {
+          "en": "Atlantis parliament passes new data privacy law",
+          "zh": "亚特兰蒂斯议会通过新数据隐私法"
+        },
+        "overview": {
+          "en": "Atlantis lawmakers approved a new data privacy law, which officials said would give residents more control over personal data.",
+          "zh": "亚特兰蒂斯议会通过一项新数据隐私法，官员称该法将赋予居民更多个人数据控制权。"
+        },
+        "points": [
+          {
+            "en": "The law was passed on Monday.",
+            "zh": "该法于周一通过。",
+            "article_id": "demo000000003"
+          }
+        ],
+        "limitations": [
+          {
+            "en": "Only one source; this tool read only the title and RSS summary, not the full article.",
+            "zh": "单一来源；本工具仅读取标题与 RSS 摘要，未读取全文。",
+            "article_ids": [
+              "demo000000003"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "event_id": "e3",
+      "title_en": "Power cut hits northern Atlantis",
+      "title_zh": "亚特兰蒂斯北部发生停电",
+      "article_ids": [
+        "demo000000004"
+      ],
+      "source_count": 1,
+      "reused": false,
+      "material_hash": "demo-e3",
+      "selection_reason": {
+        "en": "Selected despite limited material (title only).",
+        "zh": "材料不足（仅有标题）仍入选，以展示局限说明。",
+        "article_ids": [
+          "demo000000004"
+        ]
+      },
+      "card": {
+        "status": "ok",
+        "single_source": true,
+        "source": "示例媒体 B",
+        "title": {
+          "en": "Power cut hits northern Atlantis",
+          "zh": "亚特兰蒂斯北部发生停电"
+        },
+        "overview": {
+          "en": "This entry has only a headline and no RSS summary, so further details are unavailable.",
+          "zh": "该条目仅有标题、无 RSS 摘要，详情不可知。"
+        },
+        "points": [
+          {
+            "en": "A power cut affected northern Atlantis.",
+            "zh": "亚特兰蒂斯北部发生停电。",
+            "article_id": "demo000000004"
+          }
+        ],
+        "limitations": [
+          {
+            "en": "This entry has only a title and no RSS summary.",
+            "zh": "该条目仅有标题，无 RSS 摘要。",
+            "article_ids": [
+              "demo000000004"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

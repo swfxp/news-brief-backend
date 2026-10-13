@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>每日选读</title>
+  <style>
+:root {
+  --bg: #f7f7f5;
+  --card-bg: #ffffff;
+  --text: #1c1c1c;
+  --muted: #6b6b6b;
+  --accent: #2b5c8a;
+  --border: #e4e4e0;
+  --warn: #8a5a2b;
+  --warn-bg: #fdf3e7;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei",
+    "PingFang SC", "Noto Sans CJK SC", "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+.container { max-width: 860px; margin: 0 auto; padding: 24px 16px 64px; }
+header { margin-bottom: 20px; }
+h1 { font-size: 1.55rem; line-height: 1.3; margin: 0 0 6px; }
+.subtitle { color: var(--muted); font-size: .88rem; margin: 0; }
+.notice {
+  background: var(--warn-bg);
+  border: 1px solid #e8c89a;
+  color: var(--warn);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: .88rem;
+  margin: 12px 0;
+}
+.order-note { color: var(--muted); font-size: .82rem; margin: 0 0 16px; }
+.event-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .03);
+}
+.event-card.multi { border-left: 4px solid var(--accent); }
+.event-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-bottom: 6px; }
+.event-title { font-size: 1.15rem; line-height: 1.4; margin: 0; }
+.event-badge {
+  display: inline-block;
+  font-size: .7rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 999px;
+  padding: 2px 10px;
+  white-space: nowrap;
+}
+.event-badge.single { background: #9a9a94; }
+.group-reason { font-size: .82rem; color: var(--muted); margin: 0 0 12px; }
+.articles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.article-cell {
+  background: #fafaf7;
+  border-left: 3px solid var(--border);
+  border-radius: 0 6px 6px 0;
+  padding: 10px 12px;
+}
+.cell-title { font-size: .95rem; line-height: 1.45; margin: 0 0 6px; }
+.cell-meta { font-size: .8rem; color: var(--muted); margin-bottom: 6px; }
+.cell-meta a { color: var(--accent); text-decoration: none; }
+.cell-meta a:hover { text-decoration: underline; }
+.cell-desc { font-size: .85rem; color: #555; margin: 0; white-space: pre-wrap; word-break: break-word; }
+.empty { color: var(--muted); text-align: center; padding: 40px 0; }
+footer { color: var(--muted); font-size: .8rem; margin-top: 8px; text-align: center; }
+.brief-card {
+  background: #fbfbfa;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  margin: 12px 0;
+}
+.brief-part { margin-bottom: 14px; }
+.brief-part:last-child { margin-bottom: 0; }
+.brief-label {
+  font-size: .78rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .04em;
+  margin: 0 0 6px;
+}
+.brief-note { font-weight: 400; color: var(--muted); letter-spacing: 0; }
+.brief-item {
+  margin-bottom: 10px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border);
+}
+.brief-item:last-child { margin-bottom: 0; }
+.brief-en { margin: 0 0 2px; font-size: .92rem; }
+.brief-zh { margin: 0 0 4px; font-size: .92rem; color: #444; }
+.brief-source { margin-bottom: 8px; }
+.brief-source:last-child { margin-bottom: 0; }
+.brief-source-name { margin: 0 0 4px; font-size: .82rem; font-weight: 600; color: var(--muted); }
+.brief-tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.id-tag {
+  font-size: .72rem;
+  color: var(--accent);
+  background: #eef3f8;
+  border-radius: 4px;
+  padding: 1px 6px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.id-tag:hover { text-decoration: underline; }
+.brief-empty { color: var(--muted); font-size: .85rem; margin: 0; }
+.notice.brief-failed { margin: 12px 0; }
+details.original {
+  margin-top: 12px;
+  border-top: 1px dashed var(--border);
+  padding-top: 10px;
+}
+details.original summary {
+  cursor: pointer;
+  font-size: .82rem;
+  color: var(--accent);
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  h1 { font-size: 1.35rem; }
+  .event-title { font-size: 1.05rem; }
+  .event-card { padding: 14px 15px; }
+  .container { padding: 18px 12px 48px; }
+}
+
+.reason {
+  background: #f0f5f2;
+  border: 1px solid #cfe0d3;
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 0 0 12px;
+}
+.reason-label {
+  display: inline-block;
+  font-size: .72rem;
+  font-weight: 700;
+  color: #2f6b46;
+  letter-spacing: .04em;
+  margin-bottom: 4px;
+}
+.reason-zh { margin: 0 0 2px; font-size: .92rem; }
+.reason-en { margin: 0 0 4px; font-size: .88rem; color: #555; }
+.single-source-card { border-left: 3px solid #b58900; }
+.stats {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  margin: 10px 0;
+  font-size: .88rem;
+}
+.stats ul { margin: 6px 0 0; padding-left: 18px; }
+.stats li { margin: 2px 0; }
+.src-fail { color: var(--warn); }
+.event-title-en {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: .88rem;
+  font-weight: 400;
+}
+.notice.historical {
+  background: #f7e9e9;
+  border-color: #e2b6b6;
+  color: #8a2b2b;
+}
+</style>
+</head>
+<body>
+  <div class="container">
+    <div style="background:#5b1f1f;color:#fff;border-radius:8px;padding:12px 16px;margin:0 0 16px;font-size:.95rem;font-weight:600;">⚠ 虚构演示数据 · 非真实新闻（仅展示工具输出样式）</div>
+    <header>
+      <h1>每日选读</h1>
+      <p class="subtitle">生成于 2026-01-01 08:00（北京时间） · 数据采集于 2026-01-01 08:00（北京时间） · 仅依据标题与 RSS 摘要，未读取全文</p>
+      
+      <div class="notice">当前来源范围内的选读，非全球热点排行榜</div>
+      <div class="stats"><div>候选事件 3 个 · 入选 3 个 · 采集窗口 2025-12-31 08:00 ～ 2026-01-01 08:00（北京时间）</div></div>
+    </header>
+    <article class="event-card multi">
+  <div class="event-head">
+    <h2 class="event-title">亚特兰蒂斯港储油罐爆炸致 6 人受伤</h2>
+    <span class="event-badge">2 家媒体</span>
+  </div>
+  <p class="event-title-en">Atlantis port fuel depot blast injures six</p>
+  <div class="reason"><span class="reason-label">入选理由</span><p class="reason-zh">两家媒体都报道了同一起港区爆炸、6 人受伤。</p><p class="reason-en">Two outlets both report the same port blast with six injured.</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a1" target="_blank" rel="noopener noreferrer" title="demo000000001">示例媒体 A ↗</a><a class="id-tag" href="https://example.com/demo/a2" target="_blank" rel="noopener noreferrer" title="demo000000002">示例媒体 B ↗</a></div></div>
+  <div class="brief-card"><section class="brief-part"><h4 class="brief-label">事件概述</h4><p class="brief-en">Six people were injured in an explosion at a fuel depot near Atlantis port, officials said.</p><p class="brief-zh">据官员称，亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。</p></section><section class="brief-part"><h4 class="brief-label">共同报道 <span class="brief-note">（非独立核实）</span></h4><div class="brief-item"><p class="brief-en">Six people were injured in an explosion at a fuel/storage depot near Atlantis port.</p><p class="brief-zh">亚特兰蒂斯港附近一座储油设施发生爆炸，6 人受伤。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a1" target="_blank" rel="noopener noreferrer" title="demo000000001">示例媒体 A ↗</a><a class="id-tag" href="https://example.com/demo/a2" target="_blank" rel="noopener noreferrer" title="demo000000002">示例媒体 B ↗</a></div></div></section><section class="brief-part"><h4 class="brief-label">各家补充</h4><div class="brief-source"><h5 class="brief-source-name">示例媒体 A</h5><div class="brief-item"><p class="brief-en">The cause is under investigation, officials said.</p><p class="brief-zh">官员称事故原因正在调查中。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a1" target="_blank" rel="noopener noreferrer" title="demo000000001">示例媒体 A ↗</a></div></div></div><div class="brief-source"><h5 class="brief-source-name">示例媒体 B</h5><div class="brief-item"><p class="brief-en">No deaths were reported, emergency services said.</p><p class="brief-zh">应急部门称无死亡报告。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a2" target="_blank" rel="noopener noreferrer" title="demo000000002">示例媒体 B ↗</a></div></div></div></section><section class="brief-part"><h4 class="brief-label">材料局限</h4><div class="brief-item"><p class="brief-en">This tool read only the titles and RSS summaries, not the full articles.</p><p class="brief-zh">本工具仅读取标题与 RSS 摘要，未读取全文。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a1" target="_blank" rel="noopener noreferrer" title="demo000000001">示例媒体 A ↗</a><a class="id-tag" href="https://example.com/demo/a2" target="_blank" rel="noopener noreferrer" title="demo000000002">示例媒体 B ↗</a></div></div></section></div>
+  <details class="original"><summary>原始材料（2 篇）</summary><div class="articles-grid">
+    <div class="article-cell">
+      <h3 class="cell-title">Atlantis port fuel depot blast injures six workers</h3>
+      <div class="cell-meta">示例媒体 A · 2025-12-31 17:00（北京时间） · <a href="https://example.com/demo/a1" target="_blank" rel="noopener noreferrer">原文链接 →</a></div>
+      <p class="cell-desc">A fuel tank exploded at the port of Atlantis early Monday, injuring six workers, officials said. The cause is under investigation.</p>
+    </div>
+
+    <div class="article-cell">
+      <h3 class="cell-title">Six hurt in blast at Atlantis port storage depot</h3>
+      <div class="cell-meta">示例媒体 B · 2025-12-31 17:30（北京时间） · <a href="https://example.com/demo/a2" target="_blank" rel="noopener noreferrer">原文链接 →</a></div>
+      <p class="cell-desc">Six people were injured in an explosion at a storage depot near Atlantis port, emergency services said. No deaths were reported.</p>
+    </div></div></details>
+</article>
+<article class="event-card multi">
+  <div class="event-head">
+    <h2 class="event-title">亚特兰蒂斯议会通过新数据隐私法</h2>
+    <span class="event-badge single">单一来源</span>
+  </div>
+  <p class="event-title-en">Atlantis parliament passes new data privacy law</p>
+  <div class="reason"><span class="reason-label">入选理由</span><p class="reason-zh">有具体新进展（通过一项新法），单一来源。</p><p class="reason-en">A concrete new development (a law passed), single source.</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a3" target="_blank" rel="noopener noreferrer" title="demo000000003">示例媒体 A ↗</a></div></div>
+  <div class="brief-card single-source-card"><section class="brief-part"><h4 class="brief-label">事件概述</h4><p class="brief-en">Atlantis lawmakers approved a new data privacy law, which officials said would give residents more control over personal data.</p><p class="brief-zh">亚特兰蒂斯议会通过一项新数据隐私法，官员称该法将赋予居民更多个人数据控制权。</p></section><section class="brief-part"><h4 class="brief-label">要点</h4><div class="brief-item"><p class="brief-en">The law was passed on Monday.</p><p class="brief-zh">该法于周一通过。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a3" target="_blank" rel="noopener noreferrer" title="demo000000003">示例媒体 A ↗</a></div></div></section><section class="brief-part"><h4 class="brief-label">材料局限</h4><div class="brief-item"><p class="brief-en">Only one source; this tool read only the title and RSS summary, not the full article.</p><p class="brief-zh">单一来源；本工具仅读取标题与 RSS 摘要，未读取全文。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a3" target="_blank" rel="noopener noreferrer" title="demo000000003">示例媒体 A ↗</a></div></div></section></div>
+  <details class="original"><summary>原始材料（1 篇）</summary><div class="articles-grid">
+    <div class="article-cell">
+      <h3 class="cell-title">Atlantis parliament passes new data privacy law</h3>
+      <div class="cell-meta">示例媒体 A · 2025-12-31 18:00（北京时间） · <a href="https://example.com/demo/a3" target="_blank" rel="noopener noreferrer">原文链接 →</a></div>
+      <p class="cell-desc">Atlantis lawmakers approved a new data privacy law on Monday, which officials said would give residents more control over personal data.</p>
+    </div></div></details>
+</article>
+<article class="event-card multi">
+  <div class="event-head">
+    <h2 class="event-title">亚特兰蒂斯北部发生停电</h2>
+    <span class="event-badge single">单一来源</span>
+  </div>
+  <p class="event-title-en">Power cut hits northern Atlantis</p>
+  <div class="reason"><span class="reason-label">入选理由</span><p class="reason-zh">材料不足（仅有标题）仍入选，以展示局限说明。</p><p class="reason-en">Selected despite limited material (title only).</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a4" target="_blank" rel="noopener noreferrer" title="demo000000004">示例媒体 B ↗</a></div></div>
+  <div class="brief-card single-source-card"><section class="brief-part"><h4 class="brief-label">事件概述</h4><p class="brief-en">This entry has only a headline and no RSS summary, so further details are unavailable.</p><p class="brief-zh">该条目仅有标题、无 RSS 摘要，详情不可知。</p></section><section class="brief-part"><h4 class="brief-label">要点</h4><div class="brief-item"><p class="brief-en">A power cut affected northern Atlantis.</p><p class="brief-zh">亚特兰蒂斯北部发生停电。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a4" target="_blank" rel="noopener noreferrer" title="demo000000004">示例媒体 B ↗</a></div></div></section><section class="brief-part"><h4 class="brief-label">材料局限</h4><div class="brief-item"><p class="brief-en">This entry has only a title and no RSS summary.</p><p class="brief-zh">该条目仅有标题，无 RSS 摘要。</p><div class="brief-tags"><a class="id-tag" href="https://example.com/demo/a4" target="_blank" rel="noopener noreferrer" title="demo000000004">示例媒体 B ↗</a></div></div></section></div>
+  <details class="original"><summary>原始材料（1 篇）</summary><div class="articles-grid">
+    <div class="article-cell">
+      <h3 class="cell-title">Power cut hits northern Atlantis</h3>
+      <div class="cell-meta">示例媒体 B · 2025-12-31 19:00（北京时间） · <a href="https://example.com/demo/a4" target="_blank" rel="noopener noreferrer">原文链接 →</a></div>
+      <p class="cell-desc">（无 RSS 摘要）</p>
+    </div></div></details>
+</article>
+    <footer>本页由本地脚本生成，不调用 AI，不联网。“共同报道”不等于独立核实；“未提及”不等于否认。</footer>
+  </div>
+</body>
+</html>

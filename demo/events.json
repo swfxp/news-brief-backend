@@ -1,0 +1,96 @@
+{
+  "generated_at": "2026-01-01T00:00:00+00:00",
+  "window_start": "2025-12-31T00:00:00+00:00",
+  "window_end": "2026-01-01T00:00:00+00:00",
+  "sources": [
+    {
+      "name": "示例媒体 A",
+      "url": "https://example.com/demo/feed-a",
+      "status": "ok",
+      "fetched": 3,
+      "in_window": 3,
+      "selected": 3,
+      "error": null
+    },
+    {
+      "name": "示例媒体 B",
+      "url": "https://example.com/demo/feed-b",
+      "status": "ok",
+      "fetched": 2,
+      "in_window": 2,
+      "selected": 2,
+      "error": null
+    }
+  ],
+  "articles": [
+    {
+      "article_id": "demo000000001",
+      "title": "Atlantis port fuel depot blast injures six workers",
+      "source": "示例媒体 A",
+      "url": "https://example.com/demo/a1",
+      "published_at": "2025-12-31T09:00:00+00:00",
+      "rss_description": "A fuel tank exploded at the port of Atlantis early Monday, injuring six workers, officials said. The cause is under investigation."
+    },
+    {
+      "article_id": "demo000000002",
+      "title": "Six hurt in blast at Atlantis port storage depot",
+      "source": "示例媒体 B",
+      "url": "https://example.com/demo/a2",
+      "published_at": "2025-12-31T09:30:00+00:00",
+      "rss_description": "Six people were injured in an explosion at a storage depot near Atlantis port, emergency services said. No deaths were reported."
+    },
+    {
+      "article_id": "demo000000003",
+      "title": "Atlantis parliament passes new data privacy law",
+      "source": "示例媒体 A",
+      "url": "https://example.com/demo/a3",
+      "published_at": "2025-12-31T10:00:00+00:00",
+      "rss_description": "Atlantis lawmakers approved a new data privacy law on Monday, which officials said would give residents more control over personal data."
+    },
+    {
+      "article_id": "demo000000004",
+      "title": "Power cut hits northern Atlantis",
+      "source": "示例媒体 B",
+      "url": "https://example.com/demo/a4",
+      "published_at": "2025-12-31T11:00:00+00:00",
+      "rss_description": ""
+    }
+  ],
+  "events": [
+    {
+      "event_id": "e1",
+      "title_zh": "亚特兰蒂斯港储油罐爆炸致 6 人受伤",
+      "article_ids": [
+        "demo000000001",
+        "demo000000002"
+      ],
+      "source_count": 2,
+      "grouping_reason": "两篇都报道同一起亚特兰蒂斯港储油设施爆炸、6 人受伤。"
+    },
+    {
+      "event_id": "e2",
+      "title_zh": "亚特兰蒂斯议会通过新数据隐私法",
+      "article_ids": [
+        "demo000000003"
+      ],
+      "source_count": 1,
+      "grouping_reason": ""
+    },
+    {
+      "event_id": "e3",
+      "title_zh": "亚特兰蒂斯北部发生停电",
+      "article_ids": [
+        "demo000000004"
+      ],
+      "source_count": 1,
+      "grouping_reason": ""
+    }
+  ],
+  "grouping": {
+    "status": "ok",
+    "message": "归组完成：1 个多篇组，其余 2 篇单独成组。",
+    "candidate_count": 4,
+    "event_count": 3,
+    "two_source_events": 1
+  }
+}
